@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#03040c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%2302030a'/%3E%3Cpath d='M12 20h32L24 44h28' fill='none' stroke='%2322f4ff' stroke-width='6'/%3E%3Ccircle cx='12' cy='20' r='5' fill='%23ff35cc'/%3E%3C/svg%3E">
+<title>VOID SERPENT // 虚空蛇核</title>
+<style>
+/*__STYLE__*/
+</style>
+</head>
+<body>
+<div id="webgl-error" class="fatal hidden">
+  <div class="fatal-inner">
+    <span class="fatal-code">ERR // WEBGL_UNAVAILABLE</span>
+    <h1>无法建立神经链接</h1>
+    <p>你的浏览器没有启用 WebGL 2 / WebGL。请更新浏览器或在设置中开启硬件加速后重试。</p>
+  </div>
+</div>
+
+<canvas id="gl" aria-label="VOID SERPENT 三维游戏画布"></canvas>
+
+<div id="boot" class="boot">
+  <div class="boot-grid"></div>
+  <div class="boot-inner">
+    <div class="boot-mark">VS<span>//</span>03</div>
+    <div class="boot-title">VOID SERPENT</div>
+    <div class="boot-status"><i></i><span id="boot-status-text">正在校准三维坐标</span></div>
+    <div class="boot-bar"><b id="boot-bar-fill"></b></div>
+    <div class="boot-sub">NEURAL LINK INTERFACE · BUILD 3.7.12</div>
+  </div>
+</div>
+
+<div id="ui">
+  <!-- ============ IN-GAME HUD ============ -->
+  <div id="hud" class="hud hidden">
+    <div class="hud-scan" aria-hidden="true"></div>
+
+    <div class="hud-left">
+      <div class="mini-brand">
+        <span class="mini-sigil">VS</span>
+        <div><b>VOID SERPENT</b><small>LIVE NEURAL FEED</small></div>
+      </div>
+      <div class="vitals panel-cut">
+        <div class="vital-head"><span>机体完整性</span><b id="hp-text">100</b></div>
+        <div class="bar hp-bar"><i id="hp-fill"></i><u></u></div>
+        <div class="vital-head shield-head hidden" id="shield-row"><span>量子护盾</span><b id="shield-text">0</b></div>
+        <div class="bar shield-bar hidden" id="shield-bar"><i id="shield-fill"></i></div>
+        <div class="vital-head thrust-head"><span>推进剂</span><b id="thrust-text">100</b></div>
+        <div class="bar thrust-bar"><i id="thrust-fill"></i></div>
+        <div class="vital-foot">
+          <span>RUN <b id="run-time">00:00</b></span>
+          <span id="revive-badge" class="revive-badge hidden">机魂备份 ×1</span>
+        </div>
+      </div>
+      <div class="axis-readout">
+        <span>X <b id="coord-x">0.0</b></span>
+        <span>Y <b id="coord-y">0.0</b></span>
+        <span>Z <b id="coord-z">0.0</b></span>
+      </div>
+    </div>
+
+    <div class="hud-top">
+      <div class="compass-wrap">
+        <div class="compass-labels">
+          <span id="heading-label">AZ 000°</span>
+          <span id="pitch-label">EL +00°</span>
+        </div>
+        <div class="compass">
+          <div class="compass-track" id="compass-track">
+            <span>000</span><span>030</span><span>060</span><span>E</span><span>120</span><span>150</span><span>180</span><span>210</span><span>240</span><span>W</span><span>300</span><span>330</span><span>000</span>
+          </div>
+          <i class="compass-center"></i>
+        </div>
+      </div>
+      <div class="level-cluster panel-cut">
+        <div class="level-top"><span class="lv-label">进化阶段</span><b id="level-text">01</b><span class="lv-suffix">LV</span><em id="xp-text">0 / 9</em></div>
+        <div class="bar xp-bar"><i id="xp-fill"></i></div>
+        <div class="level-sub"><span>NEURAL ASCENSION</span><b id="pending-levels"></b></div>
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <div class="score-cluster">
+        <span class="micro-label">SCORE / 总得分</span>
+        <b id="score-text">0</b>
+      </div>
+      <div class="hud-actions">
+        <div class="hud-currency"><span>NANITE</span><b id="hud-nano">0</b></div>
+        <button id="btn-mute-hud" class="icon-btn" title="开关声音" aria-label="开关声音">◉</button>
+        <button id="btn-pause" class="icon-btn" title="暂停" aria-label="暂停">Ⅱ</button>
+      </div>
+      <div class="threat-box panel-cut">
+        <span class="micro-label">THREAT LEVEL</span>
+        <div class="threat-main"><b id="threat-text">I</b><div class="threat-pips" id="threat-pips"><i class="on"></i><i></i><i></i><i></i><i></i></div></div>
+        <span id="threat-desc">边界稳定</span>
+      </div>
+    </div>
+
+    <div class="combo-cluster" id="combo-cluster">
+      <span class="micro-label">SYNC CHAIN</span>
+      <div class="combo-main"><b id="combo-text">×0</b><span id="combo-mult">×1.0</span></div>
+      <div class="combo-bar"><i id="combo-fill"></i></div>
+      <div class="combo-tip" id="combo-tip">连续吞噬以提升倍率</div>
+    </div>
+
+    <div class="hud-bottom-left">
+      <div class="radar-panel panel-cut">
+        <div class="radar-head"><span>三维战术球</span><small>XYZ / TACTICAL</small></div>
+        <canvas id="radar" width="184" height="184"></canvas>
+      </div>
+      <div class="altimeter">
+        <div class="alt-head"><span>ALT</span><b id="alt-text">+00</b></div>
+        <div class="alt-track"><div class="alt-zero"></div><i id="alt-marker"></i><span class="alt-max">+40</span><span class="alt-min">−40</span></div>
+        <div class="pitch-gauge"><i id="pitch-marker"></i></div>
+      </div>
+    </div>
+
+    <div class="hud-bottom-center">
+      <div class="overdrive-row">
+        <div class="od-label"><span>OVERDRIVE</span><b id="od-text">0%</b></div>
+        <div class="od-bar" id="od-bar"><i id="od-fill"></i><b class="od-glint"></b></div>
+        <button id="btn-overdrive" class="od-key" disabled><kbd>R</kbd><span>超载</span></button>
+      </div>
+      <div class="skills" id="skills">
+        <button class="skill" data-skill="dash" title="相位折跃：沿航向瞬移并粉碎路径上的威胁">
+          <span class="skill-key">SPACE</span>
+          <span class="skill-icon">⌁</span>
+          <span class="skill-name">相位折跃</span>
+          <span class="skill-lv" id="skill-lv-dash"></span>
+          <i class="skill-cd" id="cd-dash"></i>
+          <em class="skill-cd-text" id="cd-text-dash"></em>
+        </button>
+        <button class="skill" data-skill="pulse" title="湮灭脉冲：清除周围的威胁与弹幕">
+          <span class="skill-key">Q</span>
+          <span class="skill-icon">◎</span>
+          <span class="skill-name">湮灭脉冲</span>
+          <span class="skill-lv" id="skill-lv-pulse"></span>
+          <i class="skill-cd" id="cd-pulse"></i>
+          <em class="skill-cd-text" id="cd-text-pulse"></em>
+        </button>
+        <button class="skill" data-skill="chrono" title="时间琥珀：减缓整个世界的时间">
+          <span class="skill-key">E</span>
+          <span class="skill-icon">◷</span>
+          <span class="skill-name">时间琥珀</span>
+          <span class="skill-lv" id="skill-lv-chrono"></span>
+          <i class="skill-cd" id="cd-chrono"></i>
+          <em class="skill-cd-text" id="cd-text-chrono"></em>
+        </button>
+      </div>
+      <div class="hint-bar">
+        <span id="hint-text">鼠标控制航向 · W 加速 · S 制动</span>
+        <span class="hint-divider"></span>
+        <span>ESC 暂停</span>
+      </div>
+    </div>
+
+    <div class="hud-right-bottom">
+      <div class="telemetry panel-cut">
+        <div><span>SPD</span><b id="speed-text">000</b><em>u/s</em></div>
+        <div><span>DATA</span><b id="data-text">000</b><em>kb</em></div>
+        <div><span>LEN</span><b id="length-text">000</b><em>seg</em></div>
+        <div><span>FPS</span><b id="fps-text">60</b><em>hz</em></div>
+      </div>
+      <div class="threat-target" id="threat-target">
+        <span class="target-bracket"></span>
+        <div><small>NEAREST THREAT</small><b id="threat-dist">—</b></div>
+      </div>
+    </div>
+
+    <div class="event-feed" id="event-feed"></div>
+    <div id="buffs" class="buff-strip"></div>
+    <div class="center-reticle" id="reticle">
+      <div class="reticle-ring"></div>
+      <div class="reticle-ring second"></div>
+      <i></i><span class="reticle-ticks"></span>
+    </div>
+    <div class="edge-warning" id="edge-warning"><span>边界力场</span></div>
+  </div>
+
+  <div id="banner" class="banner">
+    <span id="banner-kicker">SYSTEM</span>
+    <b id="banner-title">警告</b>
+    <p id="banner-desc"></p>
+  </div>
+  <div id="toasts" class="toasts"></div>
+  <div id="floaters" class="floaters"></div>
+  <div class="screen-flash" id="screen-flash"></div>
+
+  <!-- ============ TITLE ============ -->
+  <section id="screen-title" class="screen title-screen">
+    <div class="title-vignette"></div>
+    <div class="title-scan"></div>
+    <header class="title-top">
+      <div class="title-brand"><span class="sigil">VS</span><div><b>DEEP VOID RESEARCH</b><small>PROJECT // SERPENT 03</small></div></div>
+      <div class="title-protocol">NEURAL LINK INTERFACE <i>ONLINE</i></div>
+      <div class="title-bank">
+        <span>NANITE 储备</span><b id="title-nano">0000</b><small id="title-rate">数据农场 +0.00/s</small>
+      </div>
+    </header>
+
+    <main class="title-main">
+      <div class="hero">
+        <div class="kicker"><i></i> XYZ-FLIGHT · ROGUELIKE · INCREMENTAL</div>
+        <h1 class="logo" aria-label="VOID SERPENT">
+          <span class="logo-line" data-text="VOID">VOID</span>
+          <span class="logo-line logo-alt" data-text="SERPENT">SERPENT</span>
+        </h1>
+        <div class="cn-title"><span>虚</span><span>空</span><span>蛇</span><span>核</span><em>// 三维吞噬协议</em></div>
+        <p class="tagline">在三维虚空里吞噬数据，<br>进化成连物理法则都害怕的东西。</p>
+        <div class="feature-row">
+          <span><i>◈</i> 全轴 3D 机动</span>
+          <span><i>✦</i> 肉鸽神经进化</span>
+          <span><i>∞</i> 永久增量机库</span>
+        </div>
+        <div class="title-actions">
+          <button id="btn-start" class="btn-primary">
+            <span class="btn-glow"></span>
+            <b>初始化神经链接</b>
+            <small>ENTER THE VOID <i>→</i></small>
+          </button>
+          <button id="btn-meta-title" class="btn-ghost"><span>机库</span><small>永久进化</small></button>
+        </div>
+        <div class="save-stats">
+          <span>BEST <b id="best-score-title">0</b></span>
+          <span>RUNS <b id="run-count-title">0</b></span>
+          <span>NANITES <b id="total-nano-title">0</b></span>
+        </div>
+      </div>
+
+      <aside class="briefing panel-cut">
+        <div class="briefing-head"><span>飞行简报</span><small>FLIGHT BRIEFING / 01</small></div>
+        <div class="brief-row"><span class="brief-key">MOUSE</span><div><b>航向 / 俯仰</b><small>锁定鼠标后自由转向三维空间</small></div></div>
+        <div class="brief-row"><span class="brief-key">W / S</span><div><b>加速 / 制动</b><small>加速消耗推进剂，松开自动回充</small></div></div>
+        <div class="brief-row"><span class="brief-key">SPACE</span><div><b>相位折跃</b><small>沿航向瞬移，粉碎路径上的威胁</small></div></div>
+        <div class="brief-row"><span class="brief-key">Q / E</span><div><b>脉冲 / 时滞</b><small>清场、控场，然后吃掉一切</small></div></div>
+        <div class="brief-objective">
+          <span class="obj-tag">OBJECTIVE</span>
+          <p>吞噬数据碎片 → 升级神经突变 → 叠满超载 → 活到数据农场替你打工。</p>
+        </div>
+        <div class="mini-cube">
+          <div class="cube-axis x">X</div><div class="cube-axis y">Y</div><div class="cube-axis z">Z</div>
+          <div class="cube"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="cube-caption"><b>6DOF</b><span>NOT A FLAT PLANE</span></div>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="title-footer">
+      <div class="settings-row">
+        <button class="setting-btn" id="btn-quality-title"><span>画质</span><b id="quality-label">自动</b></button>
+        <button class="setting-btn" id="btn-sound-title"><span>音场</span><b id="sound-label">开启</b></button>
+        <button class="setting-btn" id="btn-fullscreen"><span>显示</span><b>全屏</b></button>
+      </div>
+      <div class="title-foot-note"><span class="dot-live"></span> 建议使用桌面键鼠 · 点击后自动锁定鼠标 · 耳机体验更佳 · 含强光闪烁</div>
+      <div class="version-tag">BUILD 3.7.12 // ULTRAVOID ENGINE</div>
+    </footer>
+    <div id="offline-reward" class="offline-reward hidden">
+      <span>离线数据农场</span><b id="offline-amount">+0 NANITE</b><small>在你离开时，神经尘埃仍在增殖。</small>
+    </div>
+  </section>
+
+  <!-- ============ LEVEL UP ============ -->
+  <section id="screen-levelup" class="screen modal-screen levelup-screen hidden">
+    <div class="modal-bg"></div>
+    <div class="levelup-inner">
+      <header class="modal-head">
+        <span class="eyebrow">NEURAL ASCENSION // 选择一项本局突变</span>
+        <h2>神经进化</h2>
+        <p>每一次吞噬都在改写你的存在形式。选择一张突变卡，继续深入虚空。</p>
+      </header>
+      <div class="card-grid" id="cards"></div>
+      <footer class="levelup-foot">
+        <button id="btn-reroll" class="btn-mini">重掷突变 <b id="reroll-count">1</b><small>R</small></button>
+        <span class="key-hint">点击卡牌 或 按 <b>1</b> <b>2</b> <b>3</b> 选择</span>
+        <span class="lv-run-stats" id="lv-run-stats"></span>
+      </footer>
+    </div>
+  </section>
+
+  <!-- ============ PAUSE ============ -->
+  <section id="screen-pause" class="screen modal-screen pause-screen hidden">
+    <div class="modal-bg"></div>
+    <div class="pause-card panel-cut">
+      <span class="eyebrow">NEURAL LINK SUSPENDED</span>
+      <h2>神经链接已暂停</h2>
+      <p class="pause-quote">虚空不会等你，但这一次可以。</p>
+      <div class="pause-stats">
+        <div><span>得分</span><b id="pause-score">0</b></div>
+        <div><span>阶段</span><b id="pause-level">01</b></div>
+        <div><span>突变</span><b id="pause-cards">0</b></div>
+      </div>
+      <div class="pause-build" id="pause-build"></div>
+      <div class="pause-actions">
+        <button id="btn-resume" class="btn-primary compact"><span class="btn-glow"></span><b>继续下潜</b><small>RESUME</small></button>
+        <button id="btn-restart-pause" class="btn-ghost compact">重启本局</button>
+      </div>
+      <div class="pause-settings">
+        <button class="setting-btn" id="btn-quality-pause"><span>画质</span><b id="quality-label-pause">自动</b></button>
+        <button class="setting-btn" id="btn-sound-pause"><span>音场</span><b id="sound-label-pause">开启</b></button>
+        <button class="setting-btn danger" id="btn-quit">返回标题</button>
+      </div>
+      <p class="pause-hint">按 ESC 恢复 · 结束后可在机库消耗纳米尘永久强化</p>
+    </div>
+  </section>
+
+  <!-- ============ GAME OVER ============ -->
+  <section id="screen-gameover" class="screen modal-screen gameover-screen hidden">
+    <div class="modal-bg death-bg"></div>
+    <div class="death-lines" aria-hidden="true"></div>
+    <div class="gameover-inner">
+      <div class="death-head">
+        <span class="eyebrow danger">NEURAL LINK SEVERED // 信号丢失</span>
+        <h2>神经链接已断开</h2>
+        <p id="go-cause">你被虚空吞没了。</p>
+      </div>
+      <div class="go-score-block">
+        <span>FINAL SCORE</span>
+        <b id="go-score">0</b>
+        <em id="go-best">NEW RECORD</em>
+      </div>
+      <div class="go-stats">
+        <div><span>存活时间</span><b id="go-time">00:00</b></div>
+        <div><span>吞噬数据</span><b id="go-data">0</b></div>
+        <div><span>最高连击</span><b id="go-combo">0</b></div>
+        <div><span>威胁清除</span><b id="go-kills">0</b></div>
+        <div><span>最终阶段</span><b id="go-level">01</b></div>
+        <div><span>最终长度</span><b id="go-length">0</b></div>
+      </div>
+      <div class="go-build">
+        <div class="go-build-head"><span>本局神经突变</span><small>BUILD LOG</small></div>
+        <div id="go-build-list" class="build-chips"></div>
+      </div>
+      <div class="go-reward">
+        <div><span>纳米尘回收</span><b id="go-nano">+0</b><small>可用于永久机库升级</small></div>
+        <div class="reward-scan"></div>
+      </div>
+      <div class="go-actions">
+        <button id="btn-retry" class="btn-primary compact"><span class="btn-glow"></span><b>再次接入</b><small>RE-ENTER</small></button>
+        <button id="btn-meta-go" class="btn-ghost compact">机库 / 永久进化</button>
+        <button id="btn-title-go" class="btn-mini">返回标题</button>
+      </div>
+      <p class="go-hint">按 ENTER 再次接入 · 纳米尘可保留</p>
+    </div>
+  </section>
+
+  <!-- ============ META / HANGAR ============ -->
+  <section id="screen-meta" class="screen meta-screen hidden">
+    <div class="meta-bg"></div>
+    <div class="meta-inner">
+      <header class="meta-head">
+        <div>
+          <span class="eyebrow">PERSISTENT EVOLUTION // 机库</span>
+          <h2>永久进化</h2>
+          <p>数据农场会在你离开时持续生产纳米尘。把它烧进你的基因里。</p>
+        </div>
+        <div class="meta-bank">
+          <span>NANITE 储备</span>
+          <b id="meta-nano">0000</b>
+          <small id="meta-rate">+0.00 / SEC · 数据农场</small>
+        </div>
+      </header>
+      <div class="meta-layout">
+        <aside class="meta-side">
+          <div class="meta-emblem">
+            <div class="emblem-ring"></div>
+            <div class="emblem-core">VS</div>
+            <div class="emblem-label">PERSISTENCE CORE</div>
+          </div>
+          <div class="meta-record">
+            <span>最高分 <b id="meta-best">0</b></span>
+            <span>总场次 <b id="meta-runs">0</b></span>
+            <span>累计数据 <b id="meta-data">0</b></span>
+            <span>击杀总数 <b id="meta-kills">0</b></span>
+          </div>
+          <p class="meta-note">每次死亡都会把本局得分、数据和等级折算成纳米尘。升级永久保留，下一局直接生效。</p>
+          <div class="meta-hint"><i>◈</i> 数据农场可离线产出，最多累计 8 小时。</div>
+        </aside>
+        <div class="meta-main">
+          <div class="meta-section-head"><span>永久强化协议</span><small>PERMANENT AUGMENTS</small></div>
+          <div class="meta-grid" id="meta-grid"></div>
+        </div>
+      </div>
+      <footer class="meta-foot">
+        <button id="btn-meta-back" class="btn-ghost">← 返回</button>
+        <span>所有强化永久保留 · 下一次接入时生效</span>
+        <button id="btn-meta-start" class="btn-primary compact"><span class="btn-glow"></span><b>直接接入</b><small>START RUN</small></button>
+      </footer>
+    </div>
+  </section>
+
+  <div id="mobile-warning" class="mobile-warning hidden">
+    <b>桌面键鼠体验最佳</b>
+    <span>当前设备可能没有键盘和鼠标。你仍可以拖动画面转向，并使用屏幕技能键。</span>
+  </div>
+</div>
+
+<!--__SCRIPTS__-->
+</body>
+</html>
